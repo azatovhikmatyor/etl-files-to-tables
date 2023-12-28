@@ -1,12 +1,11 @@
 import logging
 from datetime import datetime
-from typing import NamedTuple
-from sqlalchemy import text
+from typing import NamedTuple, final
+from sqlalchemy import insert
 
-from .db import engine
+from .db import engine, LogTable
 
-LOG_FILE = "logs.log"
-LOG_TABLE = "dbo.logs"
+LOG_FILE:final = "logs.log"
 
 logging.basicConfig(
     filename=LOG_FILE,
@@ -30,7 +29,7 @@ def log_to_file(msg: str, mode: str = "info") -> None:
 
 class LogData(NamedTuple):
     file_name: str
-    file_size: float
+    file_size_mb: float
     table_name: str
     status: str
     start_date: datetime
@@ -38,17 +37,13 @@ class LogData(NamedTuple):
 
 
 def log_to_db(data: LogData) -> None:
-    # UGLY: should be modified
-    stmt = f"""
-    insert into dbo.logs(file_name, file_size, table_name, status, start_date, duration)
-    values (
-        {data.file_name!r},
-        {data.file_size!r},
-        {data.table_name!r},
-        {data.status!r},
-        {data.start_date!r},
-        {data.duration!r}
-    );
-"""
+    stmt = insert(LogTable).values(
+        file_name=data.file_name,
+        file_size_mb=data.file_size_mb,
+        table_name=data.table_name,
+        status=data.status,
+        start_date=data.start_date,
+        duration=data.duration,
+    )
     with engine.begin() as conn:
-        conn.execute(text(stmt))
+        conn.execute(stmt)
